@@ -37,19 +37,19 @@ int h;
 int k;
 int a;
 int b;
-int x0;
-int y0;
-int radius;
+const int x0 = 70;
+const int y0 = 25;
+const int radius = 25;
 
-/*
+//Steinhart-hart
 const float A = -13.01169583*(pow(10,-3));
 const float B = 27.64739816*(pow(10,-4));
 const float C = -112.1391350*(pow(10,-7));
-*/
-
+/*
 const float A = -0.4237245865*(pow(10,-3));
 const float B = 5.992018904*(pow(10,-4));
 const float C = -18.64542764*(pow(10,-7));
+*/
 
 int CompassX;
 int CompassY;
@@ -70,18 +70,14 @@ char brightness = 5;
 #define BROWN           0x32
 #define HMC5883_I2CADDR     0x1E
 
-//Library must be passed the board type
-//TinyScreenDefault for TinyScreen shields
-//TinyScreenAlternate for alternate address TinyScreen shields
-//TinyScreenPlus for TinyScreen+
-
+//TinyScreen type
 TinyScreen display = TinyScreen(TinyScreenDefault);
 
 void setup(void) {
   Wire.begin(); //Initialize I2C
-  display.begin();
+  display.begin(); //Initialize display
   display.setBrightness(10); //set brightness from 0-15
-  HMC5883nit();
+  HMC5883nit(); //Initialize compass
   
   //initialize analog pins
   pinMode(aPin0, INPUT);
@@ -90,35 +86,37 @@ void setup(void) {
   //Initialize serial comm, 9600 baud rate
   Serial.begin(9600);
   
-  //set text
+  //set text sie/font/color
   display.setFont(thinPixel7_10ptFontInfo);
   int width=5;
   display.fontColor(TS_8b_White,TS_8b_Black);
 
   //time
-  setTime(13,11,00,2,3,2018);    //values in the order hr,min,sec,day,month,year
+  setTime(14,45,00,2,3,2018);    //values in the order hr,min,sec,day,month,year
 }
 
 void loop() {
-  //display.clearScreen();
   readTime();
   readTemp();
   drawPixels();
   HMC5883ReadCompass();  
-  compassPoint(x0, y0, radius, Heading);
-  
-  //display heading
-  display.setCursor(x0-5,y0-5);
-  display.fontColor(BLUE, BLACK);
-  display.print(Heading);
- 
+  compassPoint(x0, y0, radius, Heading); 
+  dispHeading();
   buttonLoop();
-
 }
+
+void dispHeading(){
+    //display heading
+  display.setCursor(80,54);
+  display.fontColor(RED, BLACK);
+  display.clearWindow(80, 54, 20, 20); //to clear residual readings that are longer than 2 digits 
+  display.print(Heading);
+  }
 
 void readTime(){
   display.setCursor(2,2); //Set the cursor where you want to start printing the time
   if(hour()<10) display.print(0); //print a leading 0 if hour value is less than 0
+  display.fontColor(BLUE, BLACK);
   display.print(hour());
   display.print(":");
   if(minute()<10) display.print(0); //print a leading 0 if minute value is less than 0
@@ -185,13 +183,12 @@ void HMC5883ReadCompass()
 
 //Calculate heading 
 //declination angle in RI is 15deg (still need to add or subtract to find true North)
-
   if (CompassY > 0 ){
-    Heading = 90 - (atan(CompassX/CompassY))*(180/pi);
+    Heading = 90 - (((atan(CompassX/CompassY))/180)*pi)*(180/pi);
     }
 
   if (CompassY < 0){
-    Heading = 270 - (atan(CompassX/CompassY))*(180/pi);
+    Heading = 270 - (((atan(CompassX/CompassY))/180)*pi)*(180/pi);
     }
 
   if (CompassY == 0 && CompassX < 0){
@@ -207,6 +204,7 @@ void compassPoint(int x0, int y0, int radius, int Heading){
   //to draw heading on circle
   if (0 < Heading < 359){
   Heading = (Heading/180)*pi;
+  display.drawLine(x0,y0,a,b,TS_8b_Black);
   b = y0 + radius*(sin(Heading)); //cartesian coordinates of heading
   a = x0 + radius*(cos(Heading));
   a = round(a);
@@ -236,9 +234,6 @@ void drawPixels(){
   //writing pixels one by one is slow, but neccessary for drawing shapes other than lines and rectangles
   //circle drawing algorithm from http://en.wikipedia.org/wiki/Midpoint_circle_algorithm
   drawCircle(70,25,25,TS_8b_Red);
-  x0 = 70;
-  y0 = 25;
-  radius = 25;
 }
 
 void drawCircle(int x0, int y0, int radius, uint8_t color)
