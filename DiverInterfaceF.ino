@@ -48,7 +48,11 @@ unsigned long previousMillis = 0;           // To store last time clock was upda
 const long interval = 1000;                 // 1 Second interval
 
 // Temp 1 sec delay
-unsigned long previousMillist = 0;           // To store last time clock was updated
+unsigned long previousMillist = 0;          // To store last time clock was updated
+
+int R;                                      // Range for modems
+const int RX = 0;     
+const int TX = 1;
 
 ///////////////////////////////////////////Setup///////////////////////////////////////////
 // Indicates version of TinyScreen display
@@ -66,6 +70,9 @@ void setup() {
           
   pinMode(aPin0, INPUT);                    // Initialize analog pin 0
   pinMode(aPin2, INPUT);                    // Initialize analog pin 2
+
+  pinMode(RX, INPUT);                       // Initialize RX
+  pinMode(TX, OUTPUT);                      // Initialize TX
   
   display.setFont(thinPixel7_10ptFontInfo);// Set text size/font
   display.fontColor(TS_8b_White,TS_8b_Black);// Set text color
@@ -87,7 +94,6 @@ void loop() {
   readTemp();
   
   delay(100);
-  //display.clearWindow(50,10,85,50); 
 }
 
 ///////////////////////////////////////////Functions///////////////////////////////////////////
@@ -115,15 +121,15 @@ void readTemp(){
   // Read temperature from thermistor 
   unsigned long currentMillist = millis();
   
-  Vin = analogRead(aPin0);                  // Read V from pin 0
-  Vin_f = 5*float(Vin)/1023;                // Vin forward
+  Vin = analogRead(aPin0);                    // Read V from pin 0
+  Vin_f = 5*float(Vin)/1023;                  // Vin forward
 
-  Vin2 = analogRead(aPin2);                 // Read V from pin 1
-  Vin_f2 = 5*float(Vin2)/1023;              // Vin2 forward
+  Vin2 = analogRead(aPin2);                   // Read V from pin 1
+  Vin_f2 = 5*float(Vin2)/1023;                // Vin2 forward
   
-  thermRes = float(R2*((Vin_f/Vin_f2)-1));  // Resistance across thermistor
-  l = log(thermRes);                        // Log calculation for Steinhart-Hart equation
-  Temp = (1 / (A + B*l + C*l*l*l))-273.15;  // Temperature in C, Steinhart-Hart Equation
+  thermRes = float(R2*((Vin_f/Vin_f2)-1));    // Resistance across thermistor
+  l = log(thermRes);                          // Log calculation for Steinhart-Hart equation
+  Temp = (1 / (A + B*l + C*l*l*l))-273.15;    // Temperature in C, Steinhart-Hart Equation
   
   if (currentMillist - previousMillist >= interval) {
     previousMillist = currentMillist;           
@@ -141,8 +147,8 @@ void readTemp(){
 void HMC5883nit(){
   // Put the HMC5883 3-axis magnetometer into operating mode
   Wire.beginTransmission(HMC5883_I2CADDR);
-  Wire.write(0x02);                         // Mode register
-  Wire.write(0x00);                         // Continuous measurement mode
+  Wire.write(0x02);                           // Mode register
+  Wire.write(0x00);                           // Continuous measurement mode
   Wire.endTransmission();
 }
 
@@ -152,7 +158,7 @@ void dispHeading(){
   compassCal();
   display.setCursor(70,10);
 
-  Degrees = Degrees-270;                     // Adjust 270 degrees because the sensor is pointing right
+  Degrees = Degrees-270;                      // Adjust 270 degrees because the sensor is pointing right
   if (Degrees < 0) Degrees=Degrees+360;
   if(Degrees<30 || Degrees> 330) display.print("N  ");
   if(Degrees >= 30 && Degrees< 60) display.print("NW "); 
@@ -165,16 +171,16 @@ void dispHeading(){
     
   display.setCursor(70,30);
   Degrees = abs(Degrees - 360);
-  display.print(Degrees);                   // Display the heading in degrees
+  display.print(Degrees);                     // Display the heading in degrees
   display.print("  ");      
 }
 
 void compassCal(){
-  readMyCompass();                          // Read compass
+  readMyCompass();                            // Read compass
   
-  if(x > x_max)                             // Find values of hard iron distortion
-    x_max = x;                              // This will store the max and min values
-  if(y >y_max)                              // of the magnetic field around you
+  if(x > x_max)                               // Find values of hard iron distortion
+    x_max = x;                                // This will store the max and min values
+  if(y >y_max)                                // of the magnetic field around you
      y_max = y;
   if(y<y_min)
      y_min = y;
@@ -184,10 +190,10 @@ void compassCal(){
   int xoffset= (x_max+x_min)/2;
   int yoffset= (y_max+y_min)/2;
   
-  int x_scale = x-xoffset;                  // Math to compensate for hard 
-  int y_scale = y-yoffset;                  // iron distortions
+  int x_scale = x-xoffset;                    // Math to compensate for hard 
+  int y_scale = y-yoffset;                    // iron distortions
   
-  float heading = atan2(x_scale,y_scale);   // Heading in radians
+  float heading = atan2(x_scale,y_scale);     // Heading in radians
   
   // Heading between 0 and 6.3 radians
   if(heading < 0)
@@ -196,16 +202,16 @@ void compassCal(){
   if(heading>2*PI)
     heading -= 2*PI;
   
-  Degrees = heading * 180/M_PI;         // Conversion to degrees  
+  Degrees = heading * 180/M_PI;               // Conversion to degrees  
 }
 
 void readMyCompass(){
   Wire.beginTransmission(HMC5883_I2CADDR);
-  Wire.write(byte(0x03));                   // Send request to X MSB register
+  Wire.write(byte(0x03));                     // Send request to X MSB register
   Wire.endTransmission();
-  Wire.requestFrom(HMC5883_I2CADDR, 6);     // Request 6 bytes; 2 bytes per axis
+  Wire.requestFrom(HMC5883_I2CADDR, 6);       // Request 6 bytes; 2 bytes per axis
   
-  if(Wire.available() <=6){                 // If 6 bytes available    
+  if(Wire.available() <=6){                   // If 6 bytes available    
     x = (int16_t)(Wire.read() << 8 | Wire.read());
     z = (int16_t)(Wire.read() << 8 | Wire.read());
     y = (int16_t)(Wire.read() << 8 | Wire.read());
@@ -216,24 +222,29 @@ void pingResponse() {
   // Modem ping function
   while (display.getButtons(TSButtonLowerLeft) == 0) {
     if (Serial.available()) {
-      String res = Serial.readString();     // Read serial, response should be 
-                                            // #RxxxTyyyyy (xxx is unit tag, 
-                                            // yyyyy used to calculate range)
-                                            
-      String character = res.substring(6);  // Store data into character string after 6
-      y = character.toInt();                // Convert to int for calc
+      String res = Serial.readString();       // Read serial, response should be 
+                                              // #RxxxTyyyyy (xxx is unit tag, 
+                                              // yyyyy used to calculate range)                                 
+      
+      String character = res.substring(6);    // Store data into character string after 6
+      
+      y = character.toInt();                  // Convert to int for calc
 
-      int R = y * c * 6.25 * exp(-5);       // Calculate range in meters
+      R = y * c * 6.25 * exp(-5);             // Calculate range in meters
       display.clearScreen();
-      display.setCursor(42, 32);            // Display position
+      display.setCursor(42, 32);              // Display position
       display.println("Range  ");
       display.println(R);
-      display.setCursor(0, 54);             // Display position
+      display.setCursor(0, 54);               // Display position
       display.println("Press to return");
     }
   }
-  //might be wrong place for this
-  //display.clearScreen();
+  display.clearScreen();
+  
+  // Redraw arrow for compass heading
+  display.drawLine(50,20,55,10,TS_8b_White);
+  display.drawLine(55,40,55,10,TS_8b_White);      
+  display.drawLine(60,20,55,10,TS_8b_White); 
 }
 
 void buttonLoop() {
@@ -242,7 +253,9 @@ void buttonLoop() {
   
   if (display.getButtons(TSButtonUpperLeft)) {
     display.println("Pinged!");
-    Serial.println("$Pxxx");                // Change based on unit tag#
+    Serial.println("$P002\r\n");                 // Change based on unit tag#
+    //digitalWrite(TX, "$P002\r\n");
+    
     pingResponse();
   } else
     display.println("          ");
