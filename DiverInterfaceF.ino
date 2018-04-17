@@ -13,7 +13,7 @@
 #include <SPI.h>
 #include <TinyScreen.h>
 #include <TimeLib.h> // Arduino time library - https://playground.arduino.cc/Code/Time
-
+#include <SoftwareSerial.h>
 
 ///////////////////////////////////////////Variables///////////////////////////////////////////
 // Tiny Screen constants
@@ -29,9 +29,9 @@ int Vin, Vin2; float Temp, thermRes, I, Vin_f, Vin_f2, V_therm, l;
 const float R2 = 82000;                     // Resistance 
 const float c = 1500;                       // m/s, sound of speed in water
 const float pi = 3.141592654;               // Pi
-const float A = -0.4237245865*(pow(10,-3)); // Steinhart-hart constants
-const float B = 5.992018904*(pow(10,-4));   // based on temp calibration
-const float C = -18.64542764*(pow(10,-7));  // http://www.thinksrs.com/downloads/programs/Therm%20Calc/NTCCalibrator/NTCcalculator.htm
+const float A = 3.412026533*(pow(10,-3));   // Steinhart-hart constants
+const float B = -0.9356856656*(pow(10,-4)); // based on temp calibration
+const float C = 11.49459621*(pow(10,-7));   // http://www.thinksrs.com/downloads/programs/Therm%20Calc/NTCCalibrator/NTCcalculator.htm
 
 // Compass variables
 int x, y, z, Degrees;
@@ -51,12 +51,13 @@ const long interval = 1000;                 // 1 Second interval
 unsigned long previousMillist = 0;          // To store last time clock was updated
 
 int R;                                      // Range for modems
-const int RX = 0;     
-const int TX = 1;
+const int RX = 2;     
+const int TX = 3;
 
 ///////////////////////////////////////////Setup///////////////////////////////////////////
 // Indicates version of TinyScreen display
 TinyScreen display = TinyScreen(TinyScreenDefault); 
+SoftwareSerial Serial1(2,3);
 
 void setup() {
   Wire.begin();                             // Initialize I2C
@@ -64,20 +65,19 @@ void setup() {
   display.setBrightness(10);                // Set brightness from 0-15
   display.setFlip(1);
   
-  Serial.begin(9600);                       // Initialize serial comm, 9600 baud rate
-
+  //Serial.begin(9600);                       // Initialize serial comm, 9600 baud rate
+  
   HMC5883nit();                             // Initialize compass
           
   pinMode(aPin0, INPUT);                    // Initialize analog pin 0
   pinMode(aPin2, INPUT);                    // Initialize analog pin 2
 
-  pinMode(RX, INPUT);                       // Initialize RX
-  pinMode(TX, OUTPUT);                      // Initialize TX
+  Serial1.begin(9600);
   
   display.setFont(thinPixel7_10ptFontInfo);// Set text size/font
   display.fontColor(TS_8b_White,TS_8b_Black);// Set text color
 
-  setTime(14,45,00,2,3,2018);               // Set time (hr,min,sec,day,month,year)
+  setTime(13,58,00,2,3,2018);               // Set time (hr,min,sec,day,month,year)
 
   //Arrow for compass heading
   display.drawLine(50,20,55,10,TS_8b_White);
@@ -103,8 +103,8 @@ void readTime(){
   display.fontColor(TS_8b_Blue, TS_8b_Black); // Font color
   display.setCursor(2,2);                     // Set position on screen
   
-  if (currentMillis - previousMillis >= interval) {
-    previousMillis = currentMillis;           // Save last time clock was updated
+  //if (currentMillis - previousMillis >= interval) {
+    //previousMillis = currentMillis;           // Save last time clock was updated
     if(hour()<10) display.print(0);           // Print a leading 0 if hour value is less than 0
     display.print(hour());
     display.print(":");
@@ -113,8 +113,8 @@ void readTime(){
     display.print(":");
     if(second()<10) display.print(0);         // Print a leading 0 if seconds value is less than 0
     display.print(second());
-    display.print(" ");                       // Empty space after seconds   
-  }
+    display.print(" ");                       // Empty space after seconds 
+  //}
 }
 
 void readTemp(){
@@ -141,6 +141,7 @@ void readTemp(){
     display.print(" *C");
   }
 }
+
 
 // Based on TinyCompass demo by Tony Batey 
 // https://www.hackster.io/tbatey_tiny-circuits/tinycompass-32de65
@@ -253,9 +254,8 @@ void buttonLoop() {
   
   if (display.getButtons(TSButtonUpperLeft)) {
     display.println("Pinged!");
-    Serial.println("$P002\r\n");                 // Change based on unit tag#
-    //digitalWrite(TX, "$P002\r\n");
-    
+    //Serial1.write("#$P002<CR><LF>");                 // Change based on unit tag#
+    Serial1.print("$P002");  
     pingResponse();
   } else
     display.println("          ");
