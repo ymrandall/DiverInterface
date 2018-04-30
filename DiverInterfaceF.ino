@@ -14,6 +14,7 @@
 #include <TinyScreen.h>
 #include <TimeLib.h> // Arduino time library - https://playground.arduino.cc/Code/Time
 #include <SoftwareSerial.h>
+#include "BMA250.h"
 
 ///////////////////////////////////////////Variables///////////////////////////////////////////
 // Tiny Screen constants
@@ -42,6 +43,8 @@ int x_max=-10000;                           // Starting values for hard iron cal
 int y_max=-10000;                           // These values should be extreme in the 
 int x_min=10000;                            // opposite direction so it calibrates nicely
 int y_min=10000;
+int z_max=10000;
+int z_min=10000;
 
 // Time 1 sec delay
 unsigned long previousMillis = 0;           // To store last time clock was updated
@@ -53,6 +56,15 @@ unsigned long previousMillist = 0;          // To store last time clock was upda
 int R;                                      // Range for modems
 const int RX = 2;     
 const int TX = 3;
+int count=0;
+
+String pin[] = {"000", "001", "002"};
+String pinfin;
+int ipin = 0;
+
+// Accelerometer
+BMA250 accel;
+int ax, ay, az, axh, ayh;
 
 ///////////////////////////////////////////Setup///////////////////////////////////////////
 // Indicates version of TinyScreen display
@@ -64,8 +76,8 @@ void setup() {
   display.begin();                          // Initialize display
   display.setBrightness(10);                // Set brightness from 0-15
   display.setFlip(1);
-  
-  //Serial.begin(9600);                       // Initialize serial comm, 9600 baud rate
+ 
+  accel.begin(BMA250_range_2g, BMA250_update_time_64ms);//This sets up the BMA250 accelerometer
   
   HMC5883nit();                             // Initialize compass
           
@@ -79,10 +91,13 @@ void setup() {
 
   setTime(13,58,00,2,3,2018);               // Set time (hr,min,sec,day,month,year)
 
+  boot();
+  pinFinder();
+  
   //Arrow for compass heading
-  display.drawLine(50,20,55,10,TS_8b_White);
-  display.drawLine(55,40,55,10,TS_8b_White);      
-  display.drawLine(60,20,55,10,TS_8b_White); 
+  display.drawLine(2,30,7,20,TS_8b_White);
+  display.drawLine(7,45,7,20,TS_8b_White);      
+  display.drawLine(12,30,7,20,TS_8b_White); 
 }
 
 
@@ -92,15 +107,70 @@ void loop() {
   buttonLoop();
   readTime();
   readTemp();
-  
   delay(100);
 }
 
 ///////////////////////////////////////////Functions///////////////////////////////////////////
+void boot (){
+  display.setFont(liberationSansNarrow_16ptFontInfo);// Set text size/font
+  display.fontColor(TS_8b_Red, TS_8b_Black);
+  display.setCursor(25,22);   
+  display.print("DigSki"); 
+  delay(2000);
+  display.clearScreen();
+  while (display.getButtons(TSButtonUpperRight) == 0) {
+    display.setFont(thinPixel7_10ptFontInfo);   // Set text size/font
+    display.fontColor(TS_8b_White, TS_8b_Black); // Font color
+    display.setCursor(2,2);                     // Set position on screen
+    display.print("Select unit ID");
+    display.setCursor(2,20);
+    display.print("Use Lt btn");
+    display.setCursor(2,38);
+    display.print("Confirm: Rt btn");
+
+    if (display.getButtons(TSButtonUpperLeft)) {
+      display.fontColor(TS_8b_Red, TS_8b_Black);
+      display.setCursor(38,55);
+      display.print(pin[ipin]);
+      delay(500);
+      ipin ++;
+    if (ipin>2) ipin = 0;
+    }
+    }
+    pinfin = pin[ipin];
+    display.clearScreen();
+    display.setCursor(2,2);
+    display.print("Calibrate compass");
+    display.setCursor(2,14);
+    display.print("by rotating on all");
+    display.setCursor(2,26);
+    display.print("three axes of");
+    display.setCursor(2,38);
+    display.print("device.");
+    delay(3000);
+    display.clearScreen();
+  }
+
+void pinFinder(){
+  display.fontColor(TS_8b_Blue, TS_8b_Black);
+  Serial1.println("$?");
+
+  if (Serial1.available()) {
+      String response = Serial1.readString();       // Read serial, response should be 
+                                              // #AxxxVyyyy (xxx is node adress, 
+                                              // yyyyy is 10-bit battery voltage monitor value)                                
+      
+      String mypin = response.substring(2,4);
+      display.setCursor(88,2);
+      display.print(mypin);
+      }
+  }
+  
 void readTime(){
   // Count/Display time
   unsigned long currentMillis = millis();
-  display.fontColor(TS_8b_Blue, TS_8b_Black); // Font color
+  display.setFont(liberationSansNarrow_12ptFontInfo);
+  display.fontColor(TS_8b_White, TS_8b_Black); // Font color
   display.setCursor(2,2);                     // Set position on screen
   
   //if (currentMillis - previousMillis >= interval) {
@@ -134,12 +204,15 @@ void readTemp(){
   if (currentMillist - previousMillist >= interval) {
     previousMillist = currentMillist;           
     // Display temperature
-    display.fontColor(TS_8b_Red, TS_8b_Black);
+    display.setFont(thinPixel7_10ptFontInfo);
+    display.fontColor(TS_8b_Blue, TS_8b_Black);
     display.setCursor(2,54);
     display.print("Temp: ");
     display.print(Temp);
     display.print(" *C");
   }
+  display.setFont(thinPixel7_10ptFontInfo);// Set text size/font
+  display.fontColor(TS_8b_White,TS_8b_Black);// Set text color
 }
 
 
@@ -155,9 +228,10 @@ void HMC5883nit(){
 
 void dispHeading(){
   // To display compass heading on screen
+  display.setFont(thinPixel7_10ptFontInfo);
   display.fontColor(TS_8b_White,TS_8b_Black);
   compassCal();
-  display.setCursor(70,10);
+  display.setCursor(20,22);
 
   Degrees = Degrees-270;                      // Adjust 270 degrees because the sensor is pointing right
   if (Degrees < 0) Degrees=Degrees+360;
@@ -170,11 +244,18 @@ void dispHeading(){
   if(Degrees >= 240 && Degrees< 300) display.print("E  "); 
   if(Degrees >= 300 && Degrees< 330) display.print("NE ");
     
-  display.setCursor(70,30);
+  display.setCursor(20,37);
   Degrees = abs(Degrees - 360);
   display.print(Degrees);                     // Display the heading in degrees
   display.print("  ");      
 }
+
+void tiltCorrection(){
+  accel.read();//This function gets new data from the accelerometer
+  ax = accel.X;
+  ay = accel.Y;
+  az = accel.Z;
+  }
 
 void compassCal(){
   readMyCompass();                            // Read compass
@@ -187,14 +268,24 @@ void compassCal(){
      y_min = y;
   if(x<x_min)
      x_min = x;
-     
+  if(z > z_max)
+    z_max = z;
+  if(z < z_min)
+    z_min = z;
+  
   int xoffset= (x_max+x_min)/2;
   int yoffset= (y_max+y_min)/2;
+  int zoffset= (z_max+z_min)/2;
   
   int x_scale = x-xoffset;                    // Math to compensate for hard 
   int y_scale = y-yoffset;                    // iron distortions
-  
-  float heading = atan2(x_scale,y_scale);     // Heading in radians
+  int z_scale = z-zoffset;
+
+  tiltCorrection();
+
+  axh = (x_scale*cos(ay)) + (z_scale*sin(ay));// Tilt correction 
+  ayh = (x_scale*sin(ax)*sin(ay)) + (y_scale*cos(ax)) - (z_scale*sin(ax)*cos(ay));
+  float heading = atan2(x_scale, y_scale);            // Heading in radians
   
   // Heading between 0 and 6.3 radians
   if(heading < 0)
@@ -221,11 +312,12 @@ void readMyCompass(){
 
 void pingResponse() {
   // Modem ping function
-  while (display.getButtons(TSButtonLowerLeft) == 0) {
-    if (Serial.available()) {
-      String res = Serial.readString();       // Read serial, response should be 
+  while (display.getButtons(TSButtonUpperRight) == 0) {
+      
+    if (Serial1.available()) {
+      String res = Serial1.readString();       // Read serial, response should be 
                                               // #RxxxTyyyyy (xxx is unit tag, 
-                                              // yyyyy used to calculate range)                                 
+                                              // yyyyy used to calculate range)                                
       
       String character = res.substring(6);    // Store data into character string after 6
       
@@ -243,22 +335,22 @@ void pingResponse() {
   display.clearScreen();
   
   // Redraw arrow for compass heading
-  display.drawLine(50,20,55,10,TS_8b_White);
-  display.drawLine(55,40,55,10,TS_8b_White);      
-  display.drawLine(60,20,55,10,TS_8b_White); 
+  display.drawLine(2,30,7,20,TS_8b_White);
+  display.drawLine(7,45,7,20,TS_8b_White);      
+  display.drawLine(12,30,7,20,TS_8b_White); 
 }
 
 void buttonLoop() {
   // Function to ping
-  display.setCursor(0, 0);
-  
   if (display.getButtons(TSButtonUpperLeft)) {
+    display.setCursor(0,0);
     display.println("Pinged!");
-    //Serial1.write("#$P002<CR><LF>");                 // Change based on unit tag#
-    Serial1.print("$P002");  
+    //Serial1.println("$P000");  
+    Serial1.print("$P");
+    Serial1.println(pinfin);
     pingResponse();
-  } else
-    display.println("          ");
+    delay(500);
+  }
 }
 
 
