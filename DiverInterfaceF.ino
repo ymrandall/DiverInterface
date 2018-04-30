@@ -64,7 +64,7 @@ int ipin = 0;
 
 // Accelerometer
 BMA250 accel;
-int ax, ay, az, axh, ayh;
+int ax, ay, az, axh, ayh, pitch, roll;
 
 ///////////////////////////////////////////Setup///////////////////////////////////////////
 // Indicates version of TinyScreen display
@@ -255,6 +255,8 @@ void tiltCorrection(){
   ax = accel.X;
   ay = accel.Y;
   az = accel.Z;
+  pitch = asin(-ax);
+  roll = asin(ay/(cos(pitch)));
   }
 
 void compassCal(){
@@ -282,10 +284,15 @@ void compassCal(){
   int z_scale = z-zoffset;
 
   tiltCorrection();
-
-  axh = (x_scale*cos(ay)) + (z_scale*sin(ay));// Tilt correction 
-  ayh = (x_scale*sin(ax)*sin(ay)) + (y_scale*cos(ax)) - (z_scale*sin(ax)*cos(ay));
-  float heading = atan2(x_scale, y_scale);            // Heading in radians
+  // ideas
+  //axh = (x_scale*cos(pitch)) + (z_scale*sin(pitch));// Tilt correction 
+  //ayh = (x_scale*sin(roll)*sin(pitch)) + (y_scale*cos(roll)) - (z_scale*sin(roll)*cos(pitch));
+  //axh = (x_scale*cos(pitch)) + (y_scale*sin(roll)*sin(pitch)) + (z_scale*cos(roll)*sin(pitch));
+  //ayh = (y_scale*cos(roll)) - (z_scale*sin(roll));
+  axh = (x_scale*(1-sq(pitch))) - (y_scale*pitch*roll) - (z_scale*pitch*sqrt(1-sq(pitch)-sq(roll)));
+  ayh = (y_scale*sqrt(1-sq(pitch)-sq(roll))) - (z_scale*roll);
+  
+  float heading = atan2(axh,ayh);            // Heading in radians
   
   // Heading between 0 and 6.3 radians
   if(heading < 0)
