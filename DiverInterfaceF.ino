@@ -90,14 +90,17 @@ void setup() {
   display.fontColor(TS_8b_White,TS_8b_Black);// Set text color
 
   setTime(13,58,00,2,3,2018);               // Set time (hr,min,sec,day,month,year)
-
+  
   boot();
   pinFinder();
+  updateTime();
+  compassMessage();
   
   //Arrow for compass heading
   display.drawLine(2,30,7,20,TS_8b_White);
   display.drawLine(7,45,7,20,TS_8b_White);      
   display.drawLine(12,30,7,20,TS_8b_White); 
+  
 }
 
 
@@ -120,17 +123,16 @@ void boot (){
   display.clearScreen();
   while (display.getButtons(TSButtonUpperRight) == 0) {
     display.setFont(thinPixel7_10ptFontInfo);   // Set text size/font
-    display.fontColor(TS_8b_White, TS_8b_Black); // Font color
-    display.setCursor(2,2);                     // Set position on screen
+    display.fontColor(TS_8b_Red, TS_8b_Black);
+    display.setCursor(10,2);                     // Set position on screen
     display.print("Select unit ID");
-    display.setCursor(2,20);
-    display.print("Use Lt btn");
-    display.setCursor(2,38);
-    display.print("Confirm: Rt btn");
+    display.fontColor(TS_8b_White, TS_8b_Black); // Font color
+    display.setCursor(2,15);
+    display.print("<Change | Confirm>");
 
     if (display.getButtons(TSButtonUpperLeft)) {
       display.fontColor(TS_8b_Red, TS_8b_Black);
-      display.setCursor(38,55);
+      display.setCursor(38,35);
       display.print(pin[ipin]);
       delay(500);
       ipin ++;
@@ -138,6 +140,9 @@ void boot (){
     }
     }
     pinfin = pin[ipin];
+  }
+
+void compassMessage(){
     display.clearScreen();
     display.setCursor(2,2);
     display.print("Calibrate compass");
@@ -150,7 +155,7 @@ void boot (){
     delay(3000);
     display.clearScreen();
   }
-
+  
 void pinFinder(){
   display.fontColor(TS_8b_Blue, TS_8b_Black);
   Serial1.println("$?");
@@ -186,6 +191,96 @@ void readTime(){
     display.print(" ");                       // Empty space after seconds 
   //}
 }
+
+void updateTime(){
+  display.clearScreen();
+  display.setFont(thinPixel7_10ptFontInfo);   // Set text size/font
+  display.fontColor(TS_8b_Red, TS_8b_Black); // Font color
+  display.setCursor(20,2);
+  display.print("SET TIME");
+  display.fontColor(TS_8b_White, TS_8b_Black); // Font color
+  display.setCursor(2,15);
+  display.print("<Change | Confirm>");
+  display.setCursor(15,40);
+  display.print("Set Hour:");
+  int myhour=hour();
+
+  while(display.getButtons(TSButtonUpperRight) == 0) {
+    display.setCursor(75,40);
+    if(myhour<10) display.print("0");
+    display.print(myhour);
+    if(display.getButtons(TSButtonUpperLeft))
+      myhour++;
+    if(myhour>23) myhour = 0;
+    delay(200);
+    }
+    
+  setTime(myhour, minute(), second(),day(),month(),year());
+  delay(500);
+  display.clearScreen();
+  display.setCursor(10,25);
+  display.print("Hour Saved");
+  delay(1000);
+  
+  display.clearScreen();
+  display.fontColor(TS_8b_Red, TS_8b_Black); // Font color
+  display.setCursor(20,2);
+  display.print("SET TIME");
+  display.fontColor(TS_8b_White, TS_8b_Black); // Font color
+  display.setCursor(2,15);
+  display.print("<Change | Confirm>");
+  display.setCursor(15,40);
+  display.print("Set Minutes:");
+  int myminute=minute();
+  
+  while(display.getButtons(TSButtonUpperRight) == 0) {
+    display.setCursor(75,40);
+    if(myminute<10) display.print("0");
+    display.print(myminute);
+    if(display.getButtons(TSButtonUpperLeft))
+      myminute++;
+    if(myminute>59) myminute = 0;
+    delay(200);
+    }
+    
+  setTime(hour(), myminute, second(), day(), month(), year());
+  delay(500);
+  display.clearScreen();
+  display.setCursor(10,25);
+  display.print("Minute Saved");
+  delay(1000);
+
+  display.clearScreen();
+  display.fontColor(TS_8b_Red, TS_8b_Black); // Font color
+  display.setCursor(20,2);
+  display.print("SET TIME");
+  display.fontColor(TS_8b_White, TS_8b_Black); // Font color
+  display.setCursor(2,15);
+  display.print("<Change | Confirm>");
+  display.setCursor(15,40);
+  display.print("Set Seconds:");
+  int mysecond=second(); 
+  mysecond = 0;
+
+  while(display.getButtons(TSButtonUpperRight) == 0) {
+    display.setCursor(75,40);
+    if(mysecond<10) display.print("0");
+    display.print(mysecond);
+    if(display.getButtons(TSButtonUpperLeft))
+      mysecond++;
+    if(mysecond>59) mysecond = 0;
+    delay(200);
+    }
+   
+   setTime(hour(), minute(), mysecond, day(), month(), year());
+    delay(500);
+    display.clearScreen();
+    display.setCursor(10,25);
+    display.print("Seconds Saved");
+    delay(1000);
+    display.clearScreen();
+  }
+  
 
 void readTemp(){
   // Read temperature from thermistor 
