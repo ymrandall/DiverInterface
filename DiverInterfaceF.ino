@@ -1,12 +1,39 @@
 //-------------------------------------------------------------------------------------------//
-//  Diver Interface                                                                          //
-//  Last Updated 5 April 2018                                                                // 
 //                                                                                           //
-//  Diver Interface for interface with TinyCircuits TinyScreen                               //
+//  Diver Interface                                                                          //
+//  Last Updated 10 May 2018                                                                 // 
+//                                                                                           //
+//  For interface with TinyScreen and Nanomodems by Jeff Neasham, Newcastle University       //             
 //                                                                                           //
 //  Written by Yelena Randall and Justin Lewis (URI)                                         //     
+//  Contact: ymrandall@my.uri.edu, jlewis001@my.uri.edu                                      //
+//                                                                                           //
+//  MIT License                                                                              //
+//                                                                                           //
+//  Copyright (c) [2018] [Yelena Randall & Justin Lewis - University of Rhode Island]        //
+//  Sponsored by: [Dr. Bridget Buxton]                                                       //
+//                                                                                           //
+//  Permission is hereby granted, free of charge, to any person obtaining a copy             //
+//  of this software and associated documentation files, to deal                             //
+//  in the Software without restriction, including without limitation the rights             //
+//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell                //
+//  copies of the Software, and to permit persons to whom the Software is                    //
+//  furnished to do so, subject to the following conditions:                                 //
+//                                                                                           //
+//  The above copyright notice and this permission notice shall be included in all           //
+//  copies or substantial portions of the Software.                                          //
+//                                                                                           //
+//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR               //
+//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,                 //
+//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE              //
+//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER                   //
+//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,            //
+//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE            //
+//  SOFTWARE.                                                                                //
+//                                                                                           //
 //                                                                                           //
 //-------------------------------------------------------------------------------------------//
+
 
 ///////////////////////////////////////////Libraries///////////////////////////////////////////
 #include <Wire.h>
@@ -104,7 +131,7 @@ void setup() {
 }
 
 
-///////////////////////////////////////////Main//////////////////////////////////////////////
+//////////////////////////////////////////////Main//////////////////////////////////////////////
 void loop() {
   dispHeading();
   buttonLoop();
@@ -115,13 +142,15 @@ void loop() {
 
 ///////////////////////////////////////////Functions///////////////////////////////////////////
 void boot (){
+  // to select unit ID to communicate with partner modem
   display.setFont(liberationSansNarrow_16ptFontInfo);// Set text size/font
   display.fontColor(TS_8b_Red, TS_8b_Black);
   display.setCursor(25,22);   
   display.print("DigSki"); 
   delay(2000);
   display.clearScreen();
-  while (display.getButtons(TSButtonUpperRight) == 0) {
+
+  while (display.getButtons(TSButtonUpperRight) == 0) { // Right button is used to confirm selection
     display.setFont(thinPixel7_10ptFontInfo);   // Set text size/font
     display.fontColor(TS_8b_Red, TS_8b_Black);
     display.setCursor(10,2);                     // Set position on screen
@@ -130,7 +159,7 @@ void boot (){
     display.setCursor(2,15);
     display.print("<Change | Confirm>");
 
-    if (display.getButtons(TSButtonUpperLeft)) {
+    if (display.getButtons(TSButtonUpperLeft)) { // Left button is used to cycle through options
       display.fontColor(TS_8b_Red, TS_8b_Black);
       display.setCursor(38,35);
       display.print(pin[ipin]);
@@ -139,10 +168,11 @@ void boot (){
     if (ipin>2) ipin = 0;
     }
     }
-    pinfin = pin[ipin];
+    pinfin = pin[ipin]; // set pinfin as selected ID
   }
 
 void compassMessage(){
+    // Instructions to do a "hard-iron" calibration
     display.clearScreen();
     display.setCursor(2,2);
     display.print("Calibrate compass");
@@ -157,6 +187,8 @@ void compassMessage(){
   }
   
 void pinFinder(){
+  // query modem to find ping ID, display on screen
+  
   display.fontColor(TS_8b_Blue, TS_8b_Black);
   Serial1.println("$?");
 
@@ -172,7 +204,8 @@ void pinFinder(){
   }
   
 void readTime(){
-  // Count/Display time
+  // Display time
+  
   unsigned long currentMillis = millis();
   display.setFont(liberationSansNarrow_12ptFontInfo);
   display.fontColor(TS_8b_White, TS_8b_Black); // Font color
@@ -193,6 +226,8 @@ void readTime(){
 }
 
 void updateTime(){
+  // Set time for bootup process
+  
   display.clearScreen();
   display.setFont(thinPixel7_10ptFontInfo);   // Set text size/font
   display.fontColor(TS_8b_Red, TS_8b_Black); // Font color
@@ -205,6 +240,8 @@ void updateTime(){
   display.print("Set Hour:");
   int myhour=hour();
 
+  // Right button to confirm, left to cycle through options
+  
   while(display.getButtons(TSButtonUpperRight) == 0) {
     display.setCursor(75,40);
     if(myhour<10) display.print("0");
@@ -284,6 +321,7 @@ void updateTime(){
 
 void readTemp(){
   // Read temperature from thermistor 
+  
   unsigned long currentMillist = millis();
   
   Vin = analogRead(aPin0);                    // Read V from pin 0
@@ -323,6 +361,7 @@ void HMC5883nit(){
 
 void dispHeading(){
   // To display compass heading on screen
+  
   display.setFont(thinPixel7_10ptFontInfo);
   display.fontColor(TS_8b_White,TS_8b_Black);
   compassCal();
@@ -346,6 +385,8 @@ void dispHeading(){
 }
 
 void tiltCorrection(){
+  // Read accelerometer data
+  
   accel.read();//This function gets new data from the accelerometer
   ax = accel.X;
   ay = accel.Y;
@@ -355,6 +396,8 @@ void tiltCorrection(){
   }
 
 void compassCal(){
+  // calibrate compass
+  
   readMyCompass();                            // Read compass
   
   if(x > x_max)                               // Find values of hard iron distortion
@@ -379,11 +422,8 @@ void compassCal(){
   int z_scale = z-zoffset;
 
   tiltCorrection();
-  // ideas
-  //axh = (x_scale*cos(pitch)) + (z_scale*sin(pitch));// Tilt correction 
-  //ayh = (x_scale*sin(roll)*sin(pitch)) + (y_scale*cos(roll)) - (z_scale*sin(roll)*cos(pitch));
-  //axh = (x_scale*cos(pitch)) + (y_scale*sin(roll)*sin(pitch)) + (z_scale*cos(roll)*sin(pitch));
-  //ayh = (y_scale*cos(roll)) - (z_scale*sin(roll));
+  
+  // incorporate accelerometer data to account for small tilts of the device in pitch and roll 
   axh = (x_scale*(1-sq(pitch))) - (y_scale*pitch*roll) - (z_scale*pitch*sqrt(1-sq(pitch)-sq(roll)));
   ayh = (y_scale*sqrt(1-sq(pitch)-sq(roll))) - (z_scale*roll);
   
@@ -400,6 +440,8 @@ void compassCal(){
 }
 
 void readMyCompass(){
+  // read compass
+  
   Wire.beginTransmission(HMC5883_I2CADDR);
   Wire.write(byte(0x03));                     // Send request to X MSB register
   Wire.endTransmission();
@@ -414,6 +456,7 @@ void readMyCompass(){
 
 void pingResponse() {
   // Modem ping function
+  
   while (display.getButtons(TSButtonUpperRight) == 0) {
       
     if (Serial1.available()) {
@@ -427,11 +470,11 @@ void pingResponse() {
 
       R = y * c * 6.25 * exp(-5);             // Calculate range in meters
       display.clearScreen();
-      display.setCursor(42, 32);              // Display position
-      display.println("Range  ");
+      display.setCursor(38, 32);              // Display position
+      display.println("Range: ");
       display.println(R);
-      display.setCursor(0, 54);               // Display position
-      display.println("Press to return");
+      display.setCursor(14, 10);               // Display position
+      display.println("Press to return>");
     }
   }
   display.clearScreen();
@@ -443,13 +486,12 @@ void pingResponse() {
 }
 
 void buttonLoop() {
-  // Function to ping
+  // Function to send ping command
   if (display.getButtons(TSButtonUpperLeft)) {
+    display.clearScreen();
     display.setCursor(0,0);
     display.println("Pinged!");
-    //Serial1.println("$P000");  
-    Serial1.print("$P");
-    Serial1.println(pinfin);
+    Serial1.print("$P000");
     pingResponse();
     delay(500);
   }
