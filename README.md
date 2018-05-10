@@ -70,7 +70,7 @@ Copyright (c) [2018] [Yelena Randall && Justin Lewis]
 
 [University Of Rhode Island]
 
-Sponsored by Prof. Bridget Buxton
+Sponsored by [Prof. Bridget Buxton]
 
 Contact:
 
