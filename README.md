@@ -67,8 +67,18 @@ Liscense
 MIT License
 
 Copyright (c) [2018] [Yelena Randall && Justin Lewis] 
+
 [University Of Rhode Island]
-Sponsored by [ Prof. Bridget Buxton]
+
+Sponsored by Prof. Bridget Buxton
+
+Contact:
+
+ymrandall@my.uri.edu
+
+jlewis001@my.uri.edu
+
+
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
